@@ -1,4 +1,4 @@
--- yes spoof
+-- spoof
 local cfg = getgenv().Config
 
 local spoofEveryone = cfg.spoofEveryone or false
@@ -19,11 +19,11 @@ local targetId = avatarId > 0 and avatarId or LocalPlayer.UserId
 local success, UserData = pcall(function()
     return game:HttpGet("https://users.roblox.com/v1/users/" .. tostring(targetId), true)
 end)
-
 if not success then return end
 
 local decodedData = game:GetService("HttpService"):JSONDecode(UserData)
 
+-- Name & DisplayName Spoof
 if spoofEveryone then
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer then
@@ -38,7 +38,7 @@ else
     LocalPlayer.CharacterAppearanceId = targetId
 end
 
--- Avatar Changer (Using HumanoidDescription)
+-- Improved Avatar Changer
 local function getDesc(id)
     local success, desc = pcall(function()
         return Players:GetHumanoidDescriptionFromUserId(id)
@@ -47,6 +47,7 @@ local function getDesc(id)
 end
 
 local function cleanCharacter(char)
+    if not char then return end
     for _, v in ipairs(char:GetChildren()) do
         if v:IsA("Accessory") or v:IsA("Hat") or v:IsA("BodyColors") or
            v:IsA("CharacterMesh") or v:IsA("Shirt") or v:IsA("Pants") or
@@ -56,15 +57,31 @@ local function cleanCharacter(char)
     end
 end
 
-local function applyAvatar(target_id, target_char)
+local applying = false
+
+local function applyAvatar(target_id)
+    if applying then return end
+    applying = true
+    
+    local char = LocalPlayer.Character
+    if not char then 
+        applying = false
+        return 
+    end
+    
+    local hum = char:WaitForChild("Humanoid", 3)
+    if not hum then 
+        applying = false
+        return 
+    end
+
+    task.wait(0.8)
+    
     local desc = getDesc(target_id)
-    if not desc then return end
-    
-    local char = target_char or LocalPlayer.Character
-    if not char then return end
-    
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
+    if not desc then 
+        applying = false
+        return 
+    end
 
     cleanCharacter(char)
     
@@ -76,6 +93,8 @@ local function applyAvatar(target_id, target_char)
         end
     end)
 
+    -- Force BodyColors
+    task.wait(0.3)
     local bc = char:FindFirstChildOfClass("BodyColors")
     if not bc then
         bc = Instance.new("BodyColors")
@@ -87,15 +106,18 @@ local function applyAvatar(target_id, target_char)
     bc.RightArmColor3 = desc.RightArmColor
     bc.LeftLegColor3 = desc.LeftLegColor
     bc.RightLegColor3 = desc.RightLegColor
+
+    applying = false
 end
 
 if not spoofEveryone then
     LocalPlayer.CharacterAdded:Connect(function()
-        task.wait(1.5)
+        task.wait(1.2)
         applyAvatar(targetId)
     end)
+    
     if LocalPlayer.Character then
-        task.wait(1.5)
+        task.wait(1.2)
         applyAvatar(targetId)
     end
 end
@@ -113,6 +135,7 @@ oldNamecall = hookmetamethod(game, "__index", function(self, key)
     return oldNamecall(self, key)
 end)
 
+-- Executor Spoof
 if spoofExecutor then
     getgenv().FakeExecutorName = fakeExecutorName
     local oldIdentify = identifyexecutor
